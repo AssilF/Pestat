@@ -215,26 +215,4 @@ Session routine: `zero`, `ecal`, one `dummy 10000`, then the scans of the day.
 
 Do not, during a data set. If a value of part 1 of `config.h` must change (before the data set, or for a new one), change `CONFIG_NAME` too, rebuild, and keep the scans of the two configurations apart. The CRC-32 in the header changes with any value of part 1, even if the name was forgotten.
 
-## What was kept from the earlier firmware, and what changed
 
-Kept: the wiring and pins; the fast-mode MCP4725 write; steps of a whole number of DAC codes; the multimeter calibration of the output with a linear fit (3 points, now 5, with residuals); the zero-current measurement; storage in flash; rest at 0 V at power-up and after a scan; ADC1 at 11 dB attenuation, 12 bit.
-
-Changed, and why:
-- Wi-Fi access point, web page and WebSocket removed: serial output is what PROTOCOL.md needs, and the radio adds noise to the ADC.
-- Moving-average, low-pass and Savitzky–Golay filters removed: the only processing is the mean of each 20 ms window, so the data the classifier sees are not shaped by a filter, and the raw mean is kept in every line.
-- Scan parameters fixed in the firmware instead of set from the web page (locked configuration).
-- ADC: a multimeter table on top of the factory characterization (Anshori et al.'s lookup table), with blind-zone and saturation flags.
-- Current scale from the schematic: R6 = 5.1 kΩ, oxidation positive (eq. 2.3). The earlier firmware used 2.2 kΩ and a factor 2 (same sign).
-- Tracking of a battery rail on GPIO35 removed. It sensed the positive rail, while b and V_out(I=0) follow the negative one, which the ESP32 cannot read without added hardware. Instead, `zero` and `ecal` at the start of each session, and again at the end without saving to measure the drift.
-- Sweep test replaced by the dummy-cell mode, which also fits the line.
-
-## Facts and open points (2026-11-17)
-
-Confirmed by the user: the MCP4725 runs at 3.3 V (`DAC_VDD_V`); R6 is 5.1 kΩ and V_out reaches the ADC pin directly (`R6_OHM`, `VOUT_PER_VPIN`); the rails come from batteries.
-
-Open:
-- **Section 2.3 assumes −5 V.** With batteries, the −1.5 V offset of eq. 2.1–2.2, the 1.70 V of eq. 2.3 and the current range −0.33 to +0.31 mA hold only at V₋ = −5 V; the headers give the actual values.
-- **Scan rate of the laboratory instrument: unknown.** The ESP32 runs at 51.3 mV/s; the comparison of section 3.3 should state both scan rates.
-- **Not yet run on the hardware.** The first session should be: upload, `info`, `adccal`, `zero`, `ecal`, then `dummy 10000` five times. With the display: `zero` with the display on and off, to settle `DISPLAY_DARK_DURING_SCANS`.
-- **No decision rule.** A rule needs the phase-B data set recorded on the ESP32 in the locked configuration (a rule trained on the laboratory instrument's scans would not transfer). None is planned at present; without it the standalone device shows the peak signal only.
-- Possible later improvement, not needed for the thesis: a divider from V₋ to the 3.3 V rail into a spare ADC1 pin would let the firmware record V₋ with every scan.
